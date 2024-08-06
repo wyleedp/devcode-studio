@@ -17,8 +17,8 @@
 
 ### 빌드 및 실행
 ```shell
-git clone https://github.com/wyleedp/devcode.git
-cd devcode\devcode-studio
+git clone https://github.com/wyleedp/devcode-studio.git
+cd devcode-studio
 mvnw clean package
 java -jar target\devcode-studio.jar
 ```
