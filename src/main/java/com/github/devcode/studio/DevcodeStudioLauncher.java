@@ -23,7 +23,9 @@ import java.sql.ResultSet;
 import java.util.Properties;
 import java.util.function.BiConsumer;
 
+import javax.swing.ImageIcon;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -33,7 +35,9 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTree;
+import javax.swing.JWindow;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -59,6 +63,8 @@ import org.h2.tools.Server;
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.github.devcode.studio.component.AppTreeNode;
+import com.github.devcode.studio.component.ConnectionConfigDialog;
+import com.github.devcode.studio.component.SplashWithProgressWindow;
 import com.github.devcode.studio.panel.HashGeneratorPanel;
 import com.github.devcode.studio.panel.JavaPropertiesPanel;
 import com.github.devcode.studio.panel.OsEnvPanel;
@@ -77,9 +83,9 @@ public class DevcodeStudioLauncher extends JFrame {
 	private JTabbedPane bodyTabPane;
 	
 	/**
-	 * 예) C:/Users/wylee/devcode/devcode-studio
+	 * 예) C:/Users/wylee/.devcode/devcode-studio
 	 */
-	private static final String APP_HOME = FilenameUtils.normalizeNoEndSeparator(SystemUtils.USER_HOME + "/devcode/devcode-studio", true);
+	private static final String APP_HOME = FilenameUtils.normalizeNoEndSeparator(SystemUtils.USER_HOME + "/.devcode/devcode-studio", true);
 	
 	private static final String APP_CONF_DIR = APP_HOME + "/conf";
 	private static final String APP_CONF_FILE = APP_HOME + "/conf/devcode-studio.conf";
@@ -95,7 +101,7 @@ public class DevcodeStudioLauncher extends JFrame {
 	private static final int WINDOW_HEIGHT_DEFAULT_SIZE = 800;
 	
 	private int windowWidthSize = 1000;
-	private int windowHeightSize = 800;
+	private int windowHeightSize = 700;
 	
 	private Server createTcpServer; 
 	
@@ -124,8 +130,6 @@ public class DevcodeStudioLauncher extends JFrame {
 				confBuilder.append("window.width.size=").append(WINDOW_WIDTH_DEFAULT_SIZE).append(System.lineSeparator());
 				confBuilder.append("window.height.size=").append(WINDOW_HEIGHT_DEFAULT_SIZE);
 				FileUtils.writeStringToFile(appConfFile, confBuilder.toString(), "UTF-8");
-				
-				logger.info("Configuration File Created. Path : " + appConfFile.toString());
 				
 				windowWidthSize = WINDOW_WIDTH_DEFAULT_SIZE;
 				windowHeightSize = WINDOW_HEIGHT_DEFAULT_SIZE;
@@ -239,19 +243,33 @@ public class DevcodeStudioLauncher extends JFrame {
 		}
 	}
 	
+	public static void showSplash(int duration) {
+		JWindow splash = new JWindow();
+		splash.setSize(500, 300);
+		splash.setLocationRelativeTo(null);
+
+		ImageIcon icon = new ImageIcon(DevcodeStudioLauncher.class.getResource("/images/splash.png")); // devcode-studio 들어간 이미지
+		JLabel label = new JLabel(icon);
+		label.setHorizontalAlignment(SwingConstants.CENTER);
+
+		splash.getContentPane().add(label);
+		splash.setVisible(true);
+
+		try {
+			Thread.sleep(duration);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		splash.setVisible(false);
+		splash.dispose();
+	}
+	
 	/**
 	 * 최초 구성
 	 */
 	public DevcodeStudioLauncher() {
-		try {
-			setTitle("devcode-studio");
-			setAppConfiguration();
-			setH2Database();
-			initComponent();
-		}catch(Exception e) {
-			logger.error("ERROR", e);
-			JOptionPane.showMessageDialog(getRootPane(), e.getMessage(), "확인", JOptionPane.WARNING_MESSAGE);
-		}
+		
 	}
 	
 	/**
@@ -374,9 +392,19 @@ public class DevcodeStudioLauncher extends JFrame {
 			}
 		});
 		
+		JMenuItem menuItemNew = new JMenuItem("New");
+		menuItemNew.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				ConnectionConfigDialog dialog = new ConnectionConfigDialog(DevcodeStudioLauncher.this);
+			    dialog.setVisible(true);
+			}
+		});
+		
 		
 		JMenu menuFile = new JMenu("File");
 		menuFile.add(menuItemExit);
+		menuFile.add(menuItemNew);
 		
 		menuBar.add(menuFile);
 		
@@ -513,10 +541,29 @@ public class DevcodeStudioLauncher extends JFrame {
 	 */
 	public static void main(String[] args) {
 		try {
+			SplashWithProgressWindow splash = new SplashWithProgressWindow();
+			splash.setVisible(true);
+			
+			DevcodeStudioLauncher studio = new DevcodeStudioLauncher();
+			
+			studio.setTitle("devcode-studio");
+            splash.setProgress(10, "Initialze...");
+            
+            studio.setAppConfiguration();
+            splash.setProgress(30, "AppConfiguration...");
+            
+            studio.setH2Database();
+            splash.setProgress(60, "Database...");
+            
+            studio.initComponent();
+            splash.setProgress(100, "Component...");
+            
+            splash.setVisible(false);
+            splash.dispose();
+			
 			SwingUtilities.invokeLater(new Runnable() {
 	            @Override
 	            public void run() {
-	                final DevcodeStudioLauncher studio = new DevcodeStudioLauncher();
 	                studio.setVisible(true);
 	            }
 	        });
